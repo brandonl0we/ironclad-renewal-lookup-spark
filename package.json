@@ -9,6 +9,7 @@
     "test": "tsx test/lookup.test.ts"
   },
   "dependencies": {
+    "@activecampaign-os/data-client": "git+https://gitlab.devops.app-us1.com/ac-spark/sdks/acos-data-client.git#semver:^0.8.0",
     "next": "^15.3.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

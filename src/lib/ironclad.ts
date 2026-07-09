@@ -3,6 +3,9 @@ import { normalizeAccountHost } from "./normalize";
 import type { Candidate, LookupResult, RenewalRecord } from "./types";
 
 type AcosCallPayload = Record<string, unknown>;
+type AcosDataClientCtor = new (options: Record<string, unknown>) => {
+  call: (vendor: string, endpoint: string, params: AcosCallPayload) => Promise<unknown>;
+};
 
 const ACTIVE_STATUSES = new Set(["active", "executed", "current", "signed"]);
 const INACTIVE_STATUSES = new Set(["expired", "terminated", "cancelled", "canceled", "superseded"]);
@@ -120,40 +123,16 @@ async function getRecord(id: string): Promise<IroncladRecord | undefined> {
 }
 
 async function callAcosData(vendor: string, endpoint: string, params: AcosCallPayload): Promise<unknown> {
-  const baseUrl = process.env.ACOS_DATA_URL;
-  const appId = process.env.ACOS_APP_ID;
-  const apiKey = process.env.ACOS_API_KEY;
-
-  if (!baseUrl || !appId || !apiKey) {
-    throw new Error("ACOS-Data credentials are not configured. Use ACOS_DATA_MOCK=true locally or add Spark local development credentials.");
-  }
-
-  const url = `${baseUrl.replace(/\/$/, "")}/call/${vendor}/${endpoint}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-acos-app-id": appId,
-      "x-acos-api-key": apiKey,
-      ...(process.env.CF_ACCESS_CLIENT_ID
-        ? {
-            "cf-access-client-id": process.env.CF_ACCESS_CLIENT_ID,
-            "cf-access-client-secret": process.env.CF_ACCESS_CLIENT_SECRET ?? "",
-          }
-        : {}),
-    },
-    body: JSON.stringify(params),
-    cache: "no-store",
+  const packageName = "@activecampaign-os/data-client";
+  const loadSdk = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<unknown>;
+  const { AcosDataClient } = (await loadSdk(packageName)) as { AcosDataClient: AcosDataClientCtor };
+  const client = new AcosDataClient({
+    url: process.env.ACOS_DATA_URL,
+    appId: process.env.ACOS_APP_ID,
+    apiKey: process.env.ACOS_API_KEY,
   });
 
-  const text = await response.text();
-  const body = text ? JSON.parse(text) : {};
-  if (!response.ok) {
-    const message = typeof body?.error?.message === "string" ? body.error.message : `ACOS-Data call failed with ${response.status}`;
-    throw new Error(message);
-  }
-
-  return body;
+  return client.call(vendor, endpoint, params);
 }
 
 function extractRecords(body: unknown): IroncladRecord[] {
