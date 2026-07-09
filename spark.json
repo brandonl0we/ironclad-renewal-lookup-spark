@@ -1,0 +1,9 @@
+{
+  "healthCheck": "/api/health",
+  "resources": {
+    "size": "small"
+  },
+  "acosData": {
+    "vendors": ["ironclad"]
+  }
+}
