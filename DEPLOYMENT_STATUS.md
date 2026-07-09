@@ -11,11 +11,13 @@
 - Created Spark app and GitLab repo through AC Spark:
   - Repo: `gitlab.devops.app-us1.com/ac-spark/ironclad-renewal-lookup`
   - Live URL after deploy: `https://ironclad-renewal-lookup.ac-spark.com`
+- Created and pushed an alternate GitHub source repo because GitLab was unreachable from this environment:
+  - Repo: `https://github.com/brandonl0we/ironclad-renewal-lookup-spark`
 
 ## Remaining
 
-- Push this local repo to the Spark-created GitLab repo.
-- Let Spark build/deploy from the pushed repo.
+- Point Spark at the GitHub source repo.
+- Let Spark build/deploy from the GitHub repo.
 - Test the deployed app at `https://ironclad-renewal-lookup.ac-spark.com` with `silvaris94143.activehosted.com`.
 
 ## Current Blocker
