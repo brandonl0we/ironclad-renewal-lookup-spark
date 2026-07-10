@@ -4,6 +4,7 @@
     "size": "small"
   },
   "acosData": {
-    "vendors": ["ironclad"]
+    "vendors": ["ironclad"],
+    "write": ["ironclad:list-records"]
   }
 }
