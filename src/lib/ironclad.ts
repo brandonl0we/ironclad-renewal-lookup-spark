@@ -66,7 +66,13 @@ export async function lookupRenewal(input: string, selectedRecordId?: string): P
       };
     }
 
-    const canonical = await getRecord(top.record.id);
+    let canonical: IroncladRecord | undefined;
+    try {
+      canonical = await getRecord(top.record.id);
+    } catch {
+      canonical = undefined;
+    }
+
     return foundResult(
       input,
       normalized.normalizedHost,
