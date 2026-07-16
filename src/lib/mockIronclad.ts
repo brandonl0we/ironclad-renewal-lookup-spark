@@ -97,3 +97,18 @@ export function mockListWorkflows(query: string): IroncladRecord[] {
 export function mockGetWorkflow(id: string): IroncladRecord | undefined {
   return mockRecords.find((record) => record.id === id);
 }
+
+export function mockGetRecord(id: string): IroncladRecord | undefined {
+  if (id !== "IC-15499" && id !== "6a552ba85e81fa7ca0e57827") return undefined;
+  return {
+    id: "record_sindibor",
+    ironcladId: "IC-15499",
+    properties: {
+      recordType: { type: "string", value: "Customer Contract" },
+    },
+    clauses: {
+      Term: "This Order Form expires if it is not fully executed by its stated deadline.",
+      Renewals: "The subscription will automatically renew for additional periods of the same duration.",
+    },
+  };
+}

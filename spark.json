@@ -7,7 +7,8 @@
     "vendors": ["ironclad"],
     "write": [
       "ironclad:list-workflows",
-      "ironclad:get-workflow"
+      "ironclad:get-workflow",
+      "ironclad:get-record"
     ]
   }
 }

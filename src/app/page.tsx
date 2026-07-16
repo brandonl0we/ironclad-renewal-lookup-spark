@@ -183,6 +183,23 @@ function ResultPanel({ record, result }: { record: RenewalRecord; result: Lookup
           ))}
         </div>
       </details>
+
+      {record.clauses.length ? (
+        <section className="clauses-panel">
+          <div className="clauses-header">
+            <p className="label">Archived record</p>
+            <h3>Clauses</h3>
+          </div>
+          <div className="clause-list">
+            {record.clauses.map((clause) => (
+              <article className="clause" key={clause.name}>
+                <h4>{clause.name}</h4>
+                <p>{clause.text}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </section>
   );
 }

@@ -21,6 +21,10 @@ export type RenewalRecord = {
     label: string;
     value: string;
   }>;
+  clauses: Array<{
+    name: string;
+    text: string;
+  }>;
 };
 
 export type Candidate = {
