@@ -209,7 +209,6 @@ h1 {
 }
 
 .result-panel,
-.intel-panel,
 .side-panel,
 .empty-panel {
   border: 1px solid rgba(255, 255, 255, 0.72);
@@ -218,56 +217,6 @@ h1 {
   box-shadow: var(--shadow);
   color: var(--ink);
   padding: 24px;
-}
-
-.result-stack {
-  display: grid;
-  gap: 18px;
-}
-
-.intel-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 16px;
-  margin-bottom: 16px;
-}
-
-.intel-header h2 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.intel-header a {
-  color: #1d63cf;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.intel-list {
-  display: grid;
-  gap: 10px;
-}
-
-.intel-card {
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: var(--content-soft);
-  padding: 14px;
-}
-
-.intel-card p,
-.intel-empty {
-  margin: 0;
-  line-height: 1.5;
-}
-
-.intel-card small {
-  display: block;
-  margin-top: 9px;
-  color: var(--muted);
 }
 
 .result-header {

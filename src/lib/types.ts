@@ -42,16 +42,5 @@ export type LookupResult = {
     retrievedAt: string;
     mode: "mock" | "acos-data";
   };
-  competitiveIntel?: {
-    channelId: string;
-    status: "found" | "no_matches" | "unavailable" | "mock";
-    matches: Array<{
-      timestamp: string;
-      excerpt: string;
-      author?: string;
-    }>;
-    channelUrl: string;
-    message?: string;
-  };
   message?: string;
 };

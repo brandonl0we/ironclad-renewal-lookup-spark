@@ -17,8 +17,6 @@ async function main() {
   assert.equal(result.record?.noticeDeadline, "2026-06-02");
   assert.equal(result.record?.noticeDeadlineCalculated, true);
   assert.equal(result.record?.autoRenew, true);
-  assert.equal(result.competitiveIntel?.channelId, "CQLFJBT36");
-  assert.equal(result.competitiveIntel?.status, "mock");
 
   const notFound = await lookupRenewal("missing123.activehosted.com");
   assert.equal(notFound.status, "not_found");

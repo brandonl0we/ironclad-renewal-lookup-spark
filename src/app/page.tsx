@@ -43,8 +43,8 @@ export default function Home() {
             <p className="eyebrow">Ironclad Renewal Lookup</p>
             <h1>Find contract details by AC account host</h1>
             <p className="subtitle">
-              Search read-only Ironclad workflows and competitive intelligence to surface the renewal context a CSM or
-              Support Rep needs.
+              Search read-only Ironclad workflows and surface the renewal dates, notice window, auto-renew status, owner,
+              and contract link a CSM or Support Rep needs.
             </p>
           </div>
           <div className="status-pill">Read-only</div>
@@ -68,10 +68,7 @@ export default function Home() {
 
         <div className="content-grid">
           {result?.status === "found" && result.record ? (
-            <div className="result-stack">
-              <ResultPanel record={result.record} result={result} />
-              <CompetitiveIntelPanel intel={result.competitiveIntel} />
-            </div>
+            <ResultPanel record={result.record} result={result} />
           ) : result?.status === "ambiguous" && result.candidates ? (
             <CandidatePanel candidates={result.candidates} onSelect={(id) => lookup(id)} />
           ) : result?.status === "not_found" ? (
@@ -106,10 +103,6 @@ export default function Home() {
                 <dd>{result?.source?.matchedFields.join(", ") || "None yet"}</dd>
               </div>
               <div>
-                <dt>Competitive intel</dt>
-                <dd>{formatIntelStatus(result?.competitiveIntel)}</dd>
-              </div>
-              <div>
                 <dt>Retrieved</dt>
                 <dd>{result?.source?.retrievedAt ?? "Not searched yet"}</dd>
               </div>
@@ -119,47 +112,6 @@ export default function Home() {
       </div>
     </main>
   );
-}
-
-function CompetitiveIntelPanel({ intel }: { intel: LookupResult["competitiveIntel"] }) {
-  if (!intel) return null;
-  return (
-    <section className="intel-panel">
-      <div className="intel-header">
-        <div>
-          <p className="label">Additional source</p>
-          <h2>Competitive intelligence</h2>
-        </div>
-        <a href={intel.channelUrl} target="_blank" rel="noreferrer">Open Slack ↗</a>
-      </div>
-      {intel.matches.length ? (
-        <div className="intel-list">
-          {intel.matches.map((match) => (
-            <article className="intel-card" key={`${match.timestamp}-${match.excerpt}`}>
-              <p>{match.excerpt}</p>
-              <small>{formatSlackTimestamp(match.timestamp)}{match.author ? ` · ${match.author}` : ""}</small>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <p className="intel-empty">{intel.message ?? "No matching posts found."}</p>
-      )}
-    </section>
-  );
-}
-
-function formatIntelStatus(intel: LookupResult["competitiveIntel"]) {
-  if (!intel) return "Not searched yet";
-  if (intel.status === "found") return `${intel.matches.length} Slack match${intel.matches.length === 1 ? "" : "es"}`;
-  if (intel.status === "no_matches") return "Slack searched · no matches";
-  if (intel.status === "mock") return "Disabled in mock mode";
-  return "Slack unavailable";
-}
-
-function formatSlackTimestamp(value: string) {
-  const seconds = Number(value.split(".")[0]);
-  if (!Number.isFinite(seconds)) return "Slack message";
-  return new Date(seconds * 1000).toLocaleString();
 }
 
 function ResultPanel({ record, result }: { record: RenewalRecord; result: LookupResult }) {
