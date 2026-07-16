@@ -43,7 +43,7 @@ export default function Home() {
             <p className="eyebrow">Ironclad Renewal Lookup</p>
             <h1>Find contract details by AC account host</h1>
             <p className="subtitle">
-              Search read-only Ironclad records and surface the renewal dates, notice window, auto-renew status, owner,
+              Search read-only Ironclad workflows and surface the renewal dates, notice window, auto-renew status, owner,
               and contract link a CSM or Support Rep needs.
             </p>
           </div>
@@ -127,7 +127,7 @@ function ResultPanel({ record, result }: { record: RenewalRecord; result: Lookup
     ["Notice deadline", record.noticeDeadline],
     ["Term", record.term],
     ["Owner", record.owner],
-    ["Ironclad record", record.ironcladUrl],
+    ["Ironclad workflow", record.ironcladUrl],
   ];
 
   return (
@@ -135,7 +135,7 @@ function ResultPanel({ record, result }: { record: RenewalRecord; result: Lookup
       <div className="result-header">
         <div>
           <h2 className="result-title">{record.name}</h2>
-          <p className="result-meta">Record ID: {record.id}</p>
+          <p className="result-meta">Workflow ID: {record.id}</p>
         </div>
         <div className="confidence">{result.confidence ?? "medium"} confidence</div>
       </div>
@@ -144,7 +144,15 @@ function ResultPanel({ record, result }: { record: RenewalRecord; result: Lookup
         {fields.map(([label, value]) => (
           <div className="field" key={label}>
             <p className="label">{label}</p>
-            <p className="value">{value || "Unknown"}</p>
+            <p className="value">
+              {label === "Ironclad workflow" && value ? (
+                <a href={value} target="_blank" rel="noreferrer">
+                  Open in Ironclad ↗
+                </a>
+              ) : (
+                value || "Unknown"
+              )}
+            </p>
           </div>
         ))}
       </div>
@@ -166,7 +174,7 @@ function CandidatePanel({ candidates, onSelect }: { candidates: Candidate[]; onS
       <div className="result-header">
         <div>
           <h2 className="result-title">Choose the matching contract</h2>
-          <p className="result-meta">More than one Ironclad record may belong to this account.</p>
+          <p className="result-meta">More than one Ironclad workflow may belong to this account.</p>
         </div>
       </div>
       <div className="candidate-list">
