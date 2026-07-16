@@ -5,6 +5,9 @@
   },
   "acosData": {
     "vendors": ["ironclad"],
-    "write": ["ironclad:list-records"]
+    "write": [
+      "ironclad:list-workflows",
+      "ironclad:get-workflow"
+    ]
   }
 }

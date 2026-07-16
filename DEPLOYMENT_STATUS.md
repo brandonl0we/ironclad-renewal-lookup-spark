@@ -1,30 +1,15 @@
 # Deployment Status
 
-## Completed
+## Current state
 
-- Built a Next.js Spark app for read-only Ironclad renewal lookup.
-- Requested `ironclad` ACOS-Data vendor access in `spark.json`.
-- Added local mock data for `silvaris94143.activehosted.com`.
-- Verified `npm test`.
-- Verified `npm run build`.
-- Verified local API lookup for `silvaris94143.activehosted.com`.
-- Created Spark app and GitLab repo through AC Spark:
-  - Repo: `gitlab.devops.app-us1.com/ac-spark/ironclad-renewal-lookup`
-  - Live URL after deploy: `https://ironclad-renewal-lookup.ac-spark.com`
-- Created and pushed an alternate GitHub source repo because GitLab was unreachable from this environment:
-  - Repo: `https://github.com/brandonl0we/ironclad-renewal-lookup-spark`
+- The Next.js app is deployed at `https://ironclad-renewal-lookup.ac-spark.com`.
+- ACOS-Data vendor access and Ironclad OAuth authentication are working.
+- The lookup now targets completed workflows because `Activehosted ID` is a
+  workflow attribute, not a free-text record search field.
+- The app requests only the grant-gated read endpoints `list-workflows` and
+  `get-workflow`.
 
-## Remaining
+## After deployment
 
-- Point Spark at the GitHub source repo.
-- Let Spark build/deploy from the GitHub repo.
-- Test the deployed app at `https://ironclad-renewal-lookup.ac-spark.com` with `silvaris94143.activehosted.com`.
-
-## Current Blocker
-
-From this execution environment, GitLab is not reachable:
-
-- SSH to `gitlab.devops.app-us1.com:22` times out.
-- HTTPS to `https://gitlab.devops.app-us1.com/...` times out.
-
-Spark itself is reachable in Chrome and the app/repo creation succeeded there.
+1. Approve `ironclad:list-workflows` and `ironclad:get-workflow` for this app.
+2. Test a known host such as `sindibor.activehosted.com`.

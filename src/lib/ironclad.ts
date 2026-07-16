@@ -1,4 +1,4 @@
-import { mockGetRecord, mockListRecords, type IroncladRecord } from "./mockIronclad";
+import { mockGetWorkflow, mockListWorkflows, type IroncladRecord } from "./mockIronclad";
 import { normalizeAccountHost } from "./normalize";
 import type { Candidate, LookupResult, RenewalRecord } from "./types";
 
@@ -7,22 +7,22 @@ type AcosDataClientCtor = new (options: Record<string, unknown>) => {
   call: (vendor: string, endpoint: string, params: AcosCallPayload) => Promise<unknown>;
 };
 
-const ACTIVE_STATUSES = new Set(["active", "executed", "current", "signed"]);
+const ACTIVE_STATUSES = new Set(["active", "completed", "executed", "current", "signed"]);
 const INACTIVE_STATUSES = new Set(["expired", "terminated", "cancelled", "canceled", "superseded"]);
 
 const FIELD_ALIASES = {
   counterparty: ["Counterparty Name", "Counterparty", "Customer", "Customer Name", "Account Name"],
-  agreementType: ["Agreement Type", "Contract Type", "Record Type", "Type"],
+  agreementType: ["Agreement Type", "Contract Type", "Record Type", "Record type", "Type"],
   contractStatus: ["Contract Status", "Status", "Lifecycle Status"],
-  effectiveDate: ["Effective Date", "Start Date", "Contract Start Date"],
-  renewalDate: ["Renewal Date", "Next Renewal Date", "Auto Renewal Date"],
-  expirationDate: ["Expiration Date", "End Date", "Contract End Date"],
+  effectiveDate: ["New Subscription Plan Start Date", "Effective Date", "Start Date", "Contract Start Date"],
+  renewalDate: ["Next Recurring Payment", "Renewal Date", "Next Renewal Date", "Auto Renewal Date"],
+  expirationDate: ["New Subscription Plan End Date", "Expiration Date", "End Date", "Contract End Date"],
   autoRenew: ["Auto Renew", "Auto-Renew", "Auto Renewal", "Automatic Renewal"],
   noticePeriodDays: ["Notice Period Days", "Renewal Notice Days", "Notice Days"],
   noticeDeadline: ["Notice Deadline", "Renewal Notice Deadline", "Cancellation Deadline"],
-  term: ["Term", "Initial Term", "Current Term"],
-  owner: ["Internal Owner", "Owner", "Customer Owner", "CSM", "Account Owner"],
-  accountHost: ["Account Host", "Activehosted Host", "ActiveCampaign Host", "AC Account Host"],
+  term: ["Contract Term Length", "Term", "Initial Term", "Current Term"],
+  owner: ["Workflow Owner", "Internal Owner", "Owner", "Customer Owner", "CSM", "Account Owner"],
+  accountHost: ["Activehosted ID", "activehostedId", "Account Host", "Activehosted Host", "ActiveCampaign Host", "AC Account Host"],
   accountSlug: ["Account Slug", "Account", "AC Account", "ActiveCampaign Account"],
 };
 
@@ -32,14 +32,14 @@ export async function lookupRenewal(input: string, selectedRecordId?: string): P
 
   try {
     if (selectedRecordId) {
-      const selected = await getRecord(selectedRecordId);
+      const selected = await getWorkflow(selectedRecordId);
       if (!selected) {
         return notFound(input, normalized.normalizedHost, normalized.accountSlug, mode);
       }
       return foundResult(input, normalized.normalizedHost, normalized.accountSlug, selected, ["selectedRecordId"], mode);
     }
 
-    const matches = await searchRecords(normalized.normalizedHost, normalized.accountSlug);
+    const matches = await searchWorkflows(normalized.normalizedHost);
     if (matches.length === 0) {
       return notFound(input, normalized.normalizedHost, normalized.accountSlug, mode);
     }
@@ -56,9 +56,9 @@ export async function lookupRenewal(input: string, selectedRecordId?: string): P
         status: "ambiguous",
         confidence: "medium",
         candidates: ranked.slice(0, 6).map(({ record, score }) => toCandidate(record, score)),
-        warnings: ["Multiple Ironclad records could match this account. Choose the contract to inspect."],
+        warnings: ["Multiple completed Ironclad workflows could match this account. Choose the contract to inspect."],
         source: {
-          matchedFields: ["Account Host", "Account Slug"],
+          matchedFields: ["Activehosted ID"],
           retrievedAt: new Date().toISOString(),
           mode,
         },
@@ -68,7 +68,7 @@ export async function lookupRenewal(input: string, selectedRecordId?: string): P
 
     let canonical: IroncladRecord | undefined;
     try {
-      canonical = await getRecord(top.record.id);
+      canonical = await getWorkflow(top.record.id);
     } catch {
       canonical = undefined;
     }
@@ -97,35 +97,27 @@ function shouldUseMock(): boolean {
   return process.env.ACOS_DATA_MOCK === "true" || !process.env.ACOS_DATA_URL;
 }
 
-async function searchRecords(normalizedHost: string, accountSlug: string): Promise<IroncladRecord[]> {
+async function searchWorkflows(normalizedHost: string): Promise<IroncladRecord[]> {
   if (shouldUseMock()) {
-    const byHost = mockListRecords(normalizedHost);
-    const bySlug = mockListRecords(accountSlug);
-    return dedupeRecords([...byHost, ...bySlug]);
+    return mockListWorkflows(normalizedHost);
   }
 
-  const queries: AcosCallPayload[] = [
-    { query: normalizedHost, pageSize: 25, limit: 25 },
-    { search: normalizedHost, pageSize: 25, limit: 25 },
-    { query: accountSlug, pageSize: 25, limit: 25 },
-    { search: accountSlug, pageSize: 25, limit: 25 },
-  ];
-
-  const records: IroncladRecord[] = [];
-  for (const payload of queries) {
-    const result = await callAcosData("ironclad", "list-records", payload);
-    records.push(...extractRecords(result));
-  }
-  return dedupeRecords(records);
+  const result = await callAcosData("ironclad", "list-workflows", {
+    page: 0,
+    pageSize: 100,
+    status: ["completed"],
+    filter: `Equals([activehostedId], '${normalizedHost}')`,
+  });
+  return dedupeRecords(extractWorkflows(result));
 }
 
-async function getRecord(id: string): Promise<IroncladRecord | undefined> {
+async function getWorkflow(id: string): Promise<IroncladRecord | undefined> {
   if (shouldUseMock()) {
-    return mockGetRecord(id);
+    return mockGetWorkflow(id);
   }
 
-  const result = await callAcosData("ironclad", "get-record", { id });
-  return extractRecord(result);
+  const result = await callAcosData("ironclad", "get-workflow", { id, hydrateEntities: true });
+  return extractWorkflow(result);
 }
 
 async function callAcosData(vendor: string, endpoint: string, params: AcosCallPayload): Promise<unknown> {
@@ -141,18 +133,19 @@ async function callAcosData(vendor: string, endpoint: string, params: AcosCallPa
   return client.call(vendor, endpoint, params);
 }
 
-function extractRecords(body: unknown): IroncladRecord[] {
+function extractWorkflows(body: unknown): IroncladRecord[] {
   const value = unwrapData(body);
   if (Array.isArray(value)) return value as IroncladRecord[];
-  if (isObject(value) && Array.isArray(value.records)) return value.records as IroncladRecord[];
+  if (isObject(value) && Array.isArray(value.workflows)) return value.workflows as IroncladRecord[];
+  if (isObject(value) && Array.isArray(value.list)) return value.list as IroncladRecord[];
   if (isObject(value) && Array.isArray(value.items)) return value.items as IroncladRecord[];
   if (isObject(value) && Array.isArray(value.results)) return value.results as IroncladRecord[];
   return [];
 }
 
-function extractRecord(body: unknown): IroncladRecord | undefined {
+function extractWorkflow(body: unknown): IroncladRecord | undefined {
   const value = unwrapData(body);
-  if (isObject(value) && isObject(value.record)) return value.record as IroncladRecord;
+  if (isObject(value) && isObject(value.workflow)) return value.workflow as IroncladRecord;
   if (isObject(value) && typeof value.id === "string") return value as IroncladRecord;
   return undefined;
 }
@@ -173,7 +166,7 @@ function rankRecords(records: IroncladRecord[], normalizedHost: string, accountS
 
       if (haystack.includes(normalizedHost)) {
         score += 70;
-        matchedFields.push("Account Host");
+        matchedFields.push("Activehosted ID");
       }
       if (haystack.includes(accountSlug)) {
         score += 25;
@@ -182,7 +175,9 @@ function rankRecords(records: IroncladRecord[], normalizedHost: string, accountS
       if (ACTIVE_STATUSES.has(status)) score += 25;
       if (INACTIVE_STATUSES.has(status)) score -= 30;
       if (renewalDate) {
-        const daysAway = Math.abs((renewalDate.getTime() - Date.now()) / 86400000);
+        const signedDaysAway = (renewalDate.getTime() - Date.now()) / 86400000;
+        score += signedDaysAway >= -30 ? 30 : -30;
+        const daysAway = Math.abs(signedDaysAway);
         score += Math.max(0, 15 - Math.min(15, daysAway / 60));
       }
 
@@ -207,7 +202,7 @@ function foundResult(
     normalizedHost,
     accountSlug,
     status: "found",
-    confidence: matchedFields.includes("Account Host") ? "high" : "medium",
+    confidence: matchedFields.includes("Activehosted ID") ? "high" : "medium",
     record: renewal,
     warnings,
     source: {
@@ -226,7 +221,7 @@ function notFound(input: string, normalizedHost: string, accountSlug: string, mo
     accountSlug,
     status: "not_found",
     warnings: [],
-    message: `No Ironclad records matched ${normalizedHost}.`,
+    message: `No completed Ironclad workflows matched ${normalizedHost}.`,
     source: {
       matchedFields: [],
       retrievedAt: new Date().toISOString(),
@@ -245,14 +240,14 @@ function toRenewalRecord(record: IroncladRecord): RenewalRecord {
   return {
     id: record.id,
     name: String(record.name ?? readField(record, ["Name", "Contract Name"]) ?? record.id),
-    ironcladUrl: record.url ?? `https://na1.ironcladapp.com/records/${record.id}`,
+    ironcladUrl: record.url ?? `https://ironcladapp.com/c/5ff48550c33da04a3e776dfe/workflows/${record.ironcladId ?? record.id}`,
     counterparty: toStringValue(readField(record, FIELD_ALIASES.counterparty)),
     agreementType: toStringValue(readField(record, FIELD_ALIASES.agreementType) ?? record.type),
     contractStatus: toStringValue(readField(record, FIELD_ALIASES.contractStatus) ?? record.status),
     effectiveDate: toIsoDate(readField(record, FIELD_ALIASES.effectiveDate)),
     renewalDate,
     expirationDate,
-    autoRenew: toBooleanOrString(readField(record, FIELD_ALIASES.autoRenew)),
+    autoRenew: readAutoRenew(record),
     noticePeriodDays,
     noticeDeadline,
     noticeDeadlineCalculated: !sourcedNoticeDeadline && Boolean(noticeDeadline),
@@ -294,7 +289,7 @@ function toCandidate(record: IroncladRecord, score: number): Candidate {
 }
 
 function readField(record: IroncladRecord, aliases: string[]): unknown {
-  const props = record.properties ?? {};
+  const props = { ...(record.properties ?? {}), ...(record.attributes ?? {}) };
   for (const alias of aliases) {
     if (alias in props) return props[alias];
   }
@@ -306,6 +301,27 @@ function readField(record: IroncladRecord, aliases: string[]): unknown {
   }
 
   return undefined;
+}
+
+function readAutoRenew(record: IroncladRecord): boolean | string | undefined {
+  const explicit = toBooleanOrString(readField(record, FIELD_ALIASES.autoRenew));
+  if (explicit !== undefined) return explicit;
+
+  const renewals = readClause(record.clauses, "Renewals");
+  if (!renewals) return undefined;
+  if (/will not automatically renew|does not automatically renew/i.test(renewals)) return false;
+  if (/automatically renew/i.test(renewals)) return true;
+  return renewals;
+}
+
+function readClause(clauses: IroncladRecord["clauses"], name: string): string | undefined {
+  if (!clauses) return undefined;
+  if (Array.isArray(clauses)) {
+    const clause = clauses.find((item) => String(item.name ?? item.title ?? item.label ?? "").toLowerCase() === name.toLowerCase());
+    return clause ? toStringValue(clause.text ?? clause.value ?? clause.content) : undefined;
+  }
+  const entry = Object.entries(clauses).find(([key]) => key.toLowerCase() === name.toLowerCase());
+  return entry ? toStringValue(entry[1]) : undefined;
 }
 
 function calculateNoticeDeadline(dateValue: string | undefined, days: number | undefined): string | undefined {
