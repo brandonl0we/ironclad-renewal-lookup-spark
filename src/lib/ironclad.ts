@@ -1,4 +1,4 @@
-import { mockGetWorkflow, mockListWorkflows, type IroncladRecord } from "./mockIronclad";
+import { mockGetRecord, mockGetWorkflow, mockListWorkflows, type IroncladRecord } from "./mockIronclad";
 import { normalizeAccountHost } from "./normalize";
 import type { Candidate, LookupResult, RenewalRecord } from "./types";
 
@@ -36,7 +36,7 @@ export async function lookupRenewal(input: string, selectedRecordId?: string): P
       if (!selected) {
         return notFound(input, normalized.normalizedHost, normalized.accountSlug, mode);
       }
-      return foundResult(input, normalized.normalizedHost, normalized.accountSlug, selected, ["selectedRecordId"], mode);
+      return foundResult(input, normalized.normalizedHost, normalized.accountSlug, await enrichWithRecord(selected), ["selectedRecordId"], mode);
     }
 
     const matches = await searchWorkflows(normalized.normalizedHost);
@@ -77,7 +77,7 @@ export async function lookupRenewal(input: string, selectedRecordId?: string): P
       input,
       normalized.normalizedHost,
       normalized.accountSlug,
-      canonical ?? top.record,
+      await enrichWithRecord(canonical ?? top.record),
       top.matchedFields,
       mode,
     );
@@ -117,6 +117,29 @@ async function getWorkflow(id: string): Promise<IroncladRecord | undefined> {
   }
 
   const result = await callAcosData("ironclad", "get-workflow", { id, hydrateEntities: true });
+  return extractWorkflow(result);
+}
+
+async function enrichWithRecord(workflow: IroncladRecord): Promise<IroncladRecord> {
+  const recordId = workflow.ironcladId ?? workflow.recordIds?.[0];
+  if (!recordId) return workflow;
+
+  try {
+    const record = await getRecord(recordId);
+    if (!record) return workflow;
+    return {
+      ...workflow,
+      properties: { ...(workflow.properties ?? {}), ...(record.properties ?? {}) },
+      clauses: record.clauses ?? workflow.clauses,
+    };
+  } catch {
+    return workflow;
+  }
+}
+
+async function getRecord(id: string): Promise<IroncladRecord | undefined> {
+  if (shouldUseMock()) return mockGetRecord(id);
+  const result = await callAcosData("ironclad", "get-record", { id, hydrateEntities: true });
   return extractWorkflow(result);
 }
 
@@ -254,6 +277,7 @@ function toRenewalRecord(record: IroncladRecord): RenewalRecord {
     term: toStringValue(readField(record, FIELD_ALIASES.term)),
     owner: toStringValue(readField(record, FIELD_ALIASES.owner)),
     metadata: buildMetadata(record),
+    clauses: extractClauses(record.clauses),
   };
 }
 
@@ -280,18 +304,40 @@ function buildMetadata(record: IroncladRecord): RenewalRecord["metadata"] {
   });
 
   const attributes = { ...(record.properties ?? {}), ...(record.attributes ?? {}) };
-  const attributeMetadata = Object.entries(attributes).flatMap(([key, value]) => {
+  const attributeMetadata = Object.entries(attributes).flatMap(([key, rawValue]) => {
     const definition = record.schema?.[key];
+    const propertyLabel = isObject(rawValue) && typeof rawValue.displayName === "string" ? rawValue.displayName : undefined;
+    const value = unwrapPropertyValue(rawValue);
     const formatted = formatMetadataValue(value, definition?.type);
     if (!formatted) return [];
     return [{
       key,
-      label: definition?.displayName?.trim() || humanizeKey(key),
+      label: definition?.displayName?.trim() || propertyLabel?.trim() || humanizeKey(key),
       value: formatted,
     }];
   });
 
   return [...workflowMetadata, ...attributeMetadata];
+}
+
+function unwrapPropertyValue(value: unknown): unknown {
+  if (isObject(value) && "value" in value) return value.value;
+  return value;
+}
+
+function extractClauses(clauses: IroncladRecord["clauses"]): RenewalRecord["clauses"] {
+  if (!clauses) return [];
+  if (Array.isArray(clauses)) {
+    return clauses.flatMap((clause) => {
+      const name = toStringValue(clause.name ?? clause.title ?? clause.label);
+      const text = toStringValue(unwrapPropertyValue(clause.text ?? clause.value ?? clause.content));
+      return name && text ? [{ name, text }] : [];
+    });
+  }
+  return Object.entries(clauses).flatMap(([name, rawValue]) => {
+    const text = toStringValue(unwrapPropertyValue(rawValue));
+    return text ? [{ name, text }] : [];
+  });
 }
 
 function formatMetadataValue(value: unknown, type?: string): string | undefined {
@@ -383,13 +429,13 @@ function toCandidate(record: IroncladRecord, score: number): Candidate {
 function readField(record: IroncladRecord, aliases: string[]): unknown {
   const props = { ...(record.properties ?? {}), ...(record.attributes ?? {}) };
   for (const alias of aliases) {
-    if (alias in props) return props[alias];
+    if (alias in props) return unwrapPropertyValue(props[alias]);
   }
 
   const lowerMap = new Map(Object.entries(props).map(([key, value]) => [key.toLowerCase(), value]));
   for (const alias of aliases) {
     const value = lowerMap.get(alias.toLowerCase());
-    if (value !== undefined) return value;
+    if (value !== undefined) return unwrapPropertyValue(value);
   }
 
   return undefined;
