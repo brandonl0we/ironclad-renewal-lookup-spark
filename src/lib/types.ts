@@ -16,6 +16,11 @@ export type RenewalRecord = {
   noticeDeadlineCalculated?: boolean;
   term?: string;
   owner?: string;
+  metadata: Array<{
+    key: string;
+    label: string;
+    value: string;
+  }>;
 };
 
 export type Candidate = {

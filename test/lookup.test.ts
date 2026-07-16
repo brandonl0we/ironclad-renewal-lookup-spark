@@ -27,6 +27,9 @@ async function main() {
   assert.equal(sindibor.record?.expirationDate, "2027-07-17");
   assert.equal(sindibor.record?.term, "1 year");
   assert.equal(sindibor.record?.owner, "owner@activecampaign.com");
+  assert.equal(sindibor.record?.metadata.find((field) => field.key === "counterpartyName")?.label, "Counterparty Name");
+  assert.equal(sindibor.record?.metadata.find((field) => field.key === "contractStartDate")?.value, "2026-07-17");
+  assert.equal(sindibor.record?.metadata.find((field) => field.key === "isComplete")?.value, "Yes");
 
   const notFound = await lookupRenewal("missing123.activehosted.com");
   assert.equal(notFound.status, "not_found");
