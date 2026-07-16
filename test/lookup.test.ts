@@ -18,6 +18,16 @@ async function main() {
   assert.equal(result.record?.noticeDeadlineCalculated, true);
   assert.equal(result.record?.autoRenew, true);
 
+  const sindibor = await lookupRenewal("sindibor.activehosted.com");
+  assert.equal(sindibor.status, "found");
+  assert.equal(sindibor.record?.name, "Customer Contract with Sindibor");
+  assert.equal(sindibor.record?.counterparty, "Sindibor");
+  assert.equal(sindibor.record?.effectiveDate, "2026-07-17");
+  assert.equal(sindibor.record?.renewalDate, "2027-07-17");
+  assert.equal(sindibor.record?.expirationDate, "2027-07-17");
+  assert.equal(sindibor.record?.term, "1 year");
+  assert.equal(sindibor.record?.owner, "owner@activecampaign.com");
+
   const notFound = await lookupRenewal("missing123.activehosted.com");
   assert.equal(notFound.status, "not_found");
 

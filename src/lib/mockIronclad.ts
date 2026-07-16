@@ -1,6 +1,7 @@
 export type IroncladRecord = {
   id: string;
   ironcladId?: string;
+  title?: string;
   name?: string;
   attributes?: Record<string, unknown>;
   properties?: Record<string, unknown>;
@@ -12,6 +13,21 @@ export type IroncladRecord = {
 };
 
 export const mockRecords: IroncladRecord[] = [
+  {
+    id: "6a552ba85e81fa7ca0e57827",
+    ironcladId: "IC-15499",
+    title: "Customer Contract with Sindibor",
+    status: "completed",
+    attributes: {
+      activehostedId: "sindibor.activehosted.com",
+      counterpartyName: "Sindibor",
+      contractStartDate: "2026-07-17T00:00:00-03:00",
+      contractEndDate: "2027-07-17T00:00:00-03:00",
+      nextPaymentDate: "2027-07-17T00:00:00-03:00",
+      contractTermLength: "1 year",
+      workflowOwnerEmail: "owner@activecampaign.com",
+    },
+  },
   {
     id: "workflow_silvaris_renewal_2026",
     ironcladId: "IC-MOCK-1",
