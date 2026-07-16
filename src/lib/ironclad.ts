@@ -9,6 +9,8 @@ type AcosDataClientCtor = new (options: Record<string, unknown>) => {
 
 const ACTIVE_STATUSES = new Set(["active", "completed", "executed", "current", "signed"]);
 const INACTIVE_STATUSES = new Set(["expired", "terminated", "cancelled", "canceled", "superseded"]);
+const COMPETITIVE_INTEL_CHANNEL = "CQLFJBT36";
+const COMPETITIVE_INTEL_CHANNEL_URL = `https://app.slack.com/client/E07UF5SMU10/${COMPETITIVE_INTEL_CHANNEL}`;
 
 const FIELD_ALIASES = {
   counterparty: ["Counterparty Name", "Counterparty", "Customer", "Customer Name", "Account Name"],
@@ -31,28 +33,49 @@ export async function lookupRenewal(input: string, selectedRecordId?: string): P
   const mode = shouldUseMock() ? "mock" : "acos-data";
 
   try {
+    const result = await lookupIronclad(input, normalized.normalizedHost, normalized.accountSlug, mode, selectedRecordId);
+    return addCompetitiveIntel(result, normalized.normalizedHost, normalized.accountSlug);
+  } catch (error) {
+    return {
+      input,
+      normalizedHost: normalized.normalizedHost,
+      accountSlug: normalized.accountSlug,
+      status: "error",
+      warnings: [],
+      message: error instanceof Error ? error.message : "Lookup failed.",
+    };
+  }
+}
+
+async function lookupIronclad(
+  input: string,
+  normalizedHost: string,
+  accountSlug: string,
+  mode: "mock" | "acos-data",
+  selectedRecordId?: string,
+): Promise<LookupResult> {
     if (selectedRecordId) {
       const selected = await getWorkflow(selectedRecordId);
       if (!selected) {
-        return notFound(input, normalized.normalizedHost, normalized.accountSlug, mode);
+        return notFound(input, normalizedHost, accountSlug, mode);
       }
-      return foundResult(input, normalized.normalizedHost, normalized.accountSlug, selected, ["selectedRecordId"], mode);
+      return foundResult(input, normalizedHost, accountSlug, selected, ["selectedRecordId"], mode);
     }
 
-    const matches = await searchWorkflows(normalized.normalizedHost);
+    const matches = await searchWorkflows(normalizedHost);
     if (matches.length === 0) {
-      return notFound(input, normalized.normalizedHost, normalized.accountSlug, mode);
+      return notFound(input, normalizedHost, accountSlug, mode);
     }
 
-    const ranked = rankRecords(matches, normalized.normalizedHost, normalized.accountSlug);
+    const ranked = rankRecords(matches, normalizedHost, accountSlug);
     const top = ranked[0];
     const second = ranked[1];
 
     if (second && top.score - second.score < 20) {
       return {
         input,
-        normalizedHost: normalized.normalizedHost,
-        accountSlug: normalized.accountSlug,
+        normalizedHost,
+        accountSlug,
         status: "ambiguous",
         confidence: "medium",
         candidates: ranked.slice(0, 6).map(({ record, score }) => toCandidate(record, score)),
@@ -75,22 +98,85 @@ export async function lookupRenewal(input: string, selectedRecordId?: string): P
 
     return foundResult(
       input,
-      normalized.normalizedHost,
-      normalized.accountSlug,
+      normalizedHost,
+      accountSlug,
       canonical ?? top.record,
       top.matchedFields,
       mode,
     );
-  } catch (error) {
+}
+
+async function addCompetitiveIntel(
+  result: LookupResult,
+  normalizedHost: string,
+  accountSlug: string,
+): Promise<LookupResult> {
+  if (shouldUseMock()) {
     return {
-      input,
-      normalizedHost: normalized.normalizedHost,
-      accountSlug: normalized.accountSlug,
-      status: "error",
-      warnings: [],
-      message: error instanceof Error ? error.message : "Lookup failed.",
+      ...result,
+      competitiveIntel: {
+        channelId: COMPETITIVE_INTEL_CHANNEL,
+        status: "mock",
+        matches: [],
+        channelUrl: COMPETITIVE_INTEL_CHANNEL_URL,
+        message: "Slack lookup is disabled in mock mode.",
+      },
     };
   }
+
+  try {
+    const response = await callAcosData("slack", "get-conversation-history", {
+      channel: COMPETITIVE_INTEL_CHANNEL,
+      limit: 500,
+    });
+    const messages = extractSlackMessages(response);
+    const needles = [normalizedHost.toLowerCase(), accountSlug.toLowerCase()];
+    const matches = messages
+      .filter((message) => needles.some((needle) => message.searchable.includes(needle)))
+      .slice(0, 8)
+      .map((message) => ({
+        timestamp: message.timestamp,
+        excerpt: message.text.length > 320 ? `${message.text.slice(0, 317)}…` : message.text,
+        author: message.author,
+      }));
+
+    return {
+      ...result,
+      competitiveIntel: {
+        channelId: COMPETITIVE_INTEL_CHANNEL,
+        status: matches.length ? "found" : "no_matches",
+        matches,
+        channelUrl: COMPETITIVE_INTEL_CHANNEL_URL,
+        message: matches.length
+          ? undefined
+          : `No recent posts matched ${normalizedHost} or ${accountSlug}.`,
+      },
+    };
+  } catch (error) {
+    return {
+      ...result,
+      competitiveIntel: {
+        channelId: COMPETITIVE_INTEL_CHANNEL,
+        status: "unavailable",
+        matches: [],
+        channelUrl: COMPETITIVE_INTEL_CHANNEL_URL,
+        message: error instanceof Error ? error.message : "Slack competitive intelligence is unavailable.",
+      },
+    };
+  }
+}
+
+function extractSlackMessages(body: unknown): Array<{ timestamp: string; text: string; searchable: string; author?: string }> {
+  const value = unwrapData(body);
+  const messages = isObject(value) && Array.isArray(value.messages) ? value.messages : [];
+  return messages.flatMap((message) => {
+    if (!isObject(message)) return [];
+    const text = typeof message.text === "string" ? message.text.trim() : "";
+    if (!text) return [];
+    const timestamp = typeof message.ts === "string" ? message.ts : "";
+    const author = typeof message.user === "string" ? message.user : undefined;
+    return [{ timestamp, text, searchable: JSON.stringify(message).toLowerCase(), author }];
+  });
 }
 
 function shouldUseMock(): boolean {
