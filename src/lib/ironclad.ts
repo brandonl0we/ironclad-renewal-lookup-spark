@@ -11,17 +11,17 @@ const ACTIVE_STATUSES = new Set(["active", "completed", "executed", "current", "
 const INACTIVE_STATUSES = new Set(["expired", "terminated", "cancelled", "canceled", "superseded"]);
 
 const FIELD_ALIASES = {
-  counterparty: ["Counterparty Name", "Counterparty", "Customer", "Customer Name", "Account Name"],
+  counterparty: ["counterpartyName", "Counterparty Name", "Counterparty", "Customer", "Customer Name", "Account Name"],
   agreementType: ["Agreement Type", "Contract Type", "Record Type", "Record type", "Type"],
   contractStatus: ["Contract Status", "Status", "Lifecycle Status"],
-  effectiveDate: ["New Subscription Plan Start Date", "Effective Date", "Start Date", "Contract Start Date"],
-  renewalDate: ["Next Recurring Payment", "Renewal Date", "Next Renewal Date", "Auto Renewal Date"],
-  expirationDate: ["New Subscription Plan End Date", "Expiration Date", "End Date", "Contract End Date"],
+  effectiveDate: ["contractStartDate", "agreementDate", "New Subscription Plan Start Date", "Effective Date", "Start Date", "Contract Start Date"],
+  renewalDate: ["nextPaymentDate", "Next Recurring Payment", "Renewal Date", "Next Renewal Date", "Auto Renewal Date"],
+  expirationDate: ["contractEndDate", "orderFormExpirationDate", "New Subscription Plan End Date", "Expiration Date", "End Date", "Contract End Date"],
   autoRenew: ["Auto Renew", "Auto-Renew", "Auto Renewal", "Automatic Renewal"],
   noticePeriodDays: ["Notice Period Days", "Renewal Notice Days", "Notice Days"],
   noticeDeadline: ["Notice Deadline", "Renewal Notice Deadline", "Cancellation Deadline"],
-  term: ["Contract Term Length", "Term", "Initial Term", "Current Term"],
-  owner: ["Workflow Owner", "Internal Owner", "Owner", "Customer Owner", "CSM", "Account Owner"],
+  term: ["contractTermLength", "customContractTermLength", "Contract Term Length", "Term", "Initial Term", "Current Term"],
+  owner: ["workflowOwnerEmail", "Workflow Owner", "Internal Owner", "Owner", "Customer Owner", "CSM", "Account Owner"],
   accountHost: ["Activehosted ID", "activehostedId", "Account Host", "Activehosted Host", "ActiveCampaign Host", "AC Account Host"],
   accountSlug: ["Account Slug", "Account", "AC Account", "ActiveCampaign Account"],
 };
@@ -239,7 +239,7 @@ function toRenewalRecord(record: IroncladRecord): RenewalRecord {
 
   return {
     id: record.id,
-    name: String(record.name ?? readField(record, ["Name", "Contract Name"]) ?? record.id),
+    name: String(record.title ?? record.name ?? readField(record, ["Name", "Contract Name"]) ?? record.id),
     ironcladUrl: record.url ?? `https://ironcladapp.com/c/5ff48550c33da04a3e776dfe/workflows/${record.ironcladId ?? record.id}`,
     counterparty: toStringValue(readField(record, FIELD_ALIASES.counterparty)),
     agreementType: toStringValue(readField(record, FIELD_ALIASES.agreementType) ?? record.type),
