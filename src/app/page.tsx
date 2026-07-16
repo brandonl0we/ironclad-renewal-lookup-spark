@@ -164,6 +164,25 @@ function ResultPanel({ record, result }: { record: RenewalRecord; result: Lookup
           ))}
         </ul>
       ) : null}
+
+      <details className="metadata-panel" open>
+        <summary>
+          <span>All Ironclad metadata</span>
+          <small>{record.metadata.length} populated fields</small>
+        </summary>
+        <div className="metadata-grid">
+          {record.metadata.map((field) => (
+            <div className="metadata-field" key={`${field.key}-${field.label}`}>
+              <p className="label">{field.label}</p>
+              <p className="metadata-value">
+                {/^https?:\/\//i.test(field.value) ? (
+                  <a href={field.value} target="_blank" rel="noreferrer">{field.value}</a>
+                ) : field.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </details>
     </section>
   );
 }

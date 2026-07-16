@@ -253,7 +253,99 @@ function toRenewalRecord(record: IroncladRecord): RenewalRecord {
     noticeDeadlineCalculated: !sourcedNoticeDeadline && Boolean(noticeDeadline),
     term: toStringValue(readField(record, FIELD_ALIASES.term)),
     owner: toStringValue(readField(record, FIELD_ALIASES.owner)),
+    metadata: buildMetadata(record),
   };
+}
+
+function buildMetadata(record: IroncladRecord): RenewalRecord["metadata"] {
+  const workflowFields: Array<[string, string, unknown]> = [
+    ["workflowId", "Workflow ID", record.id],
+    ["ironcladId", "Ironclad ID", record.ironcladId],
+    ["title", "Workflow Title", record.title ?? record.name],
+    ["status", "Workflow Status", record.status],
+    ["template", "Workflow Template ID", record.template],
+    ["created", "Workflow Created", record.created],
+    ["lastUpdated", "Workflow Last Updated", record.lastUpdated ?? record.updatedAt],
+    ["isComplete", "Workflow Complete", record.isComplete],
+    ["isCancelled", "Workflow Cancelled", record.isCancelled],
+    ["creator", "Workflow Creator", record.creator],
+    ["approvals", "Approvals", record.approvals],
+    ["signatures", "Signatures", record.signatures],
+    ["recordIds", "Linked Record IDs", record.recordIds],
+  ];
+
+  const workflowMetadata = workflowFields.flatMap(([key, label, value]) => {
+    const formatted = formatMetadataValue(value);
+    return formatted ? [{ key, label, value: formatted }] : [];
+  });
+
+  const attributes = { ...(record.properties ?? {}), ...(record.attributes ?? {}) };
+  const attributeMetadata = Object.entries(attributes).flatMap(([key, value]) => {
+    const definition = record.schema?.[key];
+    const formatted = formatMetadataValue(value, definition?.type);
+    if (!formatted) return [];
+    return [{
+      key,
+      label: definition?.displayName?.trim() || humanizeKey(key),
+      value: formatted,
+    }];
+  });
+
+  return [...workflowMetadata, ...attributeMetadata];
+}
+
+function formatMetadataValue(value: unknown, type?: string): string | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string") {
+    if (type === "date") return toIsoDate(value) ?? value;
+    return value;
+  }
+  if (Array.isArray(value)) {
+    const items = value.map((item) => formatMetadataValue(item)).filter((item): item is string => Boolean(item));
+    return items.length ? items.join("; ") : undefined;
+  }
+  if (!isObject(value)) return String(value);
+
+  if (typeof value.amount === "number" && typeof value.currency === "string") {
+    try {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: value.currency }).format(value.amount);
+    } catch {
+      return `${value.currency} ${value.amount}`;
+    }
+  }
+  if (typeof value.filename === "string") {
+    const version = typeof value.versionNumber === "number" ? ` · version ${value.versionNumber}` : "";
+    return `${value.filename}${version}`;
+  }
+  if (Array.isArray(value.lines) || typeof value.locality === "string") {
+    return [
+      ...(Array.isArray(value.lines) ? value.lines : []),
+      value.locality,
+      value.region,
+      value.postcode,
+      value.country,
+    ].filter(Boolean).join(", ");
+  }
+  if (typeof value.displayName === "string") {
+    const email = typeof value.email === "string" ? ` · ${value.email}` : "";
+    return `${value.displayName}${email}`;
+  }
+  if (typeof value.state === "string") return value.state;
+
+  const safeEntries = Object.entries(value)
+    .filter(([key]) => !["download", "key", "readToken"].includes(key))
+    .map(([key, nested]) => [key, formatMetadataValue(nested)] as const)
+    .filter((entry): entry is readonly [string, string] => Boolean(entry[1]));
+  return safeEntries.length ? safeEntries.map(([key, nested]) => `${humanizeKey(key)}: ${nested}`).join(" · ") : undefined;
+}
+
+function humanizeKey(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/^./, (character) => character.toUpperCase());
 }
 
 function buildWarnings(record: RenewalRecord): string[] {

@@ -303,6 +303,54 @@ h1 {
   padding: 11px 13px;
 }
 
+.metadata-panel {
+  margin-top: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(231, 238, 248, 0.72);
+  overflow: hidden;
+}
+
+.metadata-panel summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  cursor: pointer;
+  font-weight: 760;
+  list-style-position: inside;
+}
+
+.metadata-panel summary small {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  border-top: 1px solid var(--line);
+  background: var(--line);
+}
+
+.metadata-field {
+  min-width: 0;
+  background: var(--content);
+  padding: 14px 18px;
+}
+
+.metadata-value {
+  margin: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.metadata-value a {
+  color: #1d63cf;
+}
+
 .candidate-list {
   display: grid;
   gap: 10px;
@@ -410,6 +458,12 @@ h1 {
     background: #18243a;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .metadata-grid {
+    grid-template-columns: 1fr;
   }
 }
 

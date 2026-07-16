@@ -4,11 +4,21 @@ export type IroncladRecord = {
   title?: string;
   name?: string;
   attributes?: Record<string, unknown>;
+  schema?: Record<string, { displayName?: string; type?: string; propertyKey?: string }>;
   properties?: Record<string, unknown>;
   clauses?: Record<string, unknown> | Array<Record<string, unknown>>;
   status?: string;
   type?: string;
   updatedAt?: string;
+  created?: string;
+  lastUpdated?: string;
+  template?: string;
+  isCancelled?: boolean;
+  isComplete?: boolean;
+  recordIds?: string[];
+  creator?: Record<string, unknown>;
+  approvals?: Record<string, unknown>;
+  signatures?: Record<string, unknown>;
   url?: string;
 };
 
@@ -18,6 +28,20 @@ export const mockRecords: IroncladRecord[] = [
     ironcladId: "IC-15499",
     title: "Customer Contract with Sindibor",
     status: "completed",
+    created: "2026-07-13T12:00:00.000Z",
+    lastUpdated: "2026-07-16T12:00:00.000Z",
+    template: "customer-contract-template",
+    isCancelled: false,
+    isComplete: true,
+    schema: {
+      counterpartyName: { displayName: "Counterparty Name", type: "string" },
+      contractStartDate: { displayName: "New Subscription Plan Start Date", type: "date" },
+      contractEndDate: { displayName: "New Subscription Plan End Date", type: "date" },
+      nextPaymentDate: { displayName: "Next Recurring Payment", type: "date" },
+      contractTermLength: { displayName: "Contract Term Length", type: "string" },
+      workflowOwnerEmail: { displayName: "Workflow Owner Email", type: "email" },
+      activehostedId: { displayName: "Activehosted ID", type: "string" },
+    },
     attributes: {
       activehostedId: "sindibor.activehosted.com",
       counterpartyName: "Sindibor",
