@@ -4,7 +4,7 @@
     "size": "small"
   },
   "acosData": {
-    "vendors": ["ironclad"],
+    "vendors": ["ironclad", "slack"],
     "write": [
       "ironclad:list-workflows",
       "ironclad:get-workflow"
