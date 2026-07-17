@@ -34,6 +34,7 @@ export const mockRecords: IroncladRecord[] = [
     isCancelled: false,
     isComplete: true,
     schema: {
+      aRR: { displayName: "ARR", type: "monetaryAmount" },
       counterpartyName: { displayName: "Counterparty Name", type: "string" },
       contractStartDate: { displayName: "New Subscription Plan Start Date", type: "date" },
       contractEndDate: { displayName: "New Subscription Plan End Date", type: "date" },
@@ -43,6 +44,7 @@ export const mockRecords: IroncladRecord[] = [
       activehostedId: { displayName: "Activehosted ID", type: "string" },
     },
     attributes: {
+      aRR: { currency: "USD", amount: 1845 },
       activehostedId: "sindibor.activehosted.com",
       counterpartyName: "Sindibor",
       contractStartDate: "2026-07-17T00:00:00-03:00",
