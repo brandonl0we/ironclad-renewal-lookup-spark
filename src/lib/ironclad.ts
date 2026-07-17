@@ -130,7 +130,7 @@ async function enrichWithRecord(workflow: IroncladRecord): Promise<IroncladRecor
     return {
       ...workflow,
       properties: { ...(workflow.properties ?? {}), ...(record.properties ?? {}) },
-      clauses: record.clauses ?? workflow.clauses,
+      clauses: record.clauses ?? extractRecordPropertyClauses(record.properties) ?? workflow.clauses,
     };
   } catch {
     return workflow;
@@ -305,6 +305,7 @@ function buildMetadata(record: IroncladRecord): RenewalRecord["metadata"] {
 
   const attributes = { ...(record.properties ?? {}), ...(record.attributes ?? {}) };
   const attributeMetadata = Object.entries(attributes).flatMap(([key, rawValue]) => {
+    if (isObject(rawValue) && rawValue.type === "clause") return [];
     const definition = record.schema?.[key];
     const propertyLabel = isObject(rawValue) && typeof rawValue.displayName === "string" ? rawValue.displayName : undefined;
     const value = unwrapPropertyValue(rawValue);
@@ -318,6 +319,20 @@ function buildMetadata(record: IroncladRecord): RenewalRecord["metadata"] {
   });
 
   return [...workflowMetadata, ...attributeMetadata];
+}
+
+function extractRecordPropertyClauses(
+  properties: IroncladRecord["properties"],
+): Array<Record<string, unknown>> | undefined {
+  if (!properties) return undefined;
+  const clauses = Object.entries(properties).flatMap(([key, property]) => {
+    if (!isObject(property) || property.type !== "clause") return [];
+    const value = unwrapPropertyValue(property);
+    if (!isObject(value) || typeof value.clauseText !== "string" || !value.clauseText.trim()) return [];
+    const rawName = typeof value.clauseType === "string" ? value.clauseType : key.replace(/^clause_/, "");
+    return [{ name: humanizeKey(rawName), text: value.clauseText.trim() }];
+  });
+  return clauses.length ? clauses : undefined;
 }
 
 function unwrapPropertyValue(value: unknown): unknown {
