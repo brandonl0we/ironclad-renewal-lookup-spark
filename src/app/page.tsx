@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import type { Candidate, LookupResult, RenewalRecord } from "@/lib/types";
+import type { Candidate, ContractSummary, LookupResult, RenewalRecord } from "@/lib/types";
 
 const DEFAULT_ACCOUNT = "silvaris94143.activehosted.com";
 
@@ -140,68 +140,63 @@ function ResultPanel({ record, result }: { record: RenewalRecord; result: Lookup
         <div className="confidence">{result.confidence ?? "medium"} confidence</div>
       </div>
 
-      <div className="field-grid">
-        {fields.map(([label, value]) => (
-          <div className="field" key={label}>
-            <p className="label">{label}</p>
-            <p className="value">
-              {label === "Ironclad workflow" && value ? (
-                <a href={value} target="_blank" rel="noreferrer">
-                  Open in Ironclad ↗
-                </a>
-              ) : (
-                value || "Unknown"
-              )}
-            </p>
-          </div>
-        ))}
-      </div>
+      {result.summary ? <ContractBrief summary={result.summary} /> : null}
 
-      {result.warnings.length ? (
-        <ul className="warning-list">
-          {result.warnings.map((warning) => (
-            <li key={warning}>{warning}</li>
-          ))}
-        </ul>
-      ) : null}
-
-      <details className="metadata-panel" open>
+      <details className="raw-contract-panel">
         <summary>
-          <span>All Ironclad metadata</span>
-          <small>{record.metadata.length} populated fields</small>
+          <span>View raw contract data</span>
+          <small>{record.metadata.length} fields · {record.clauses.length} clauses</small>
         </summary>
-        <div className="metadata-grid">
-          {record.metadata.map((field) => (
-            <div className="metadata-field" key={`${field.key}-${field.label}`}>
-              <p className="label">{field.label}</p>
-              <p className="metadata-value">
-                {/^https?:\/\//i.test(field.value) ? (
-                  <a href={field.value} target="_blank" rel="noreferrer">{field.value}</a>
-                ) : field.value}
-              </p>
-            </div>
-          ))}
-        </div>
-      </details>
-
-      {record.clauses.length ? (
-        <section className="clauses-panel">
-          <div className="clauses-header">
-            <p className="label">Archived record</p>
-            <h3>Clauses</h3>
-          </div>
-          <div className="clause-list">
-            {record.clauses.map((clause) => (
-              <article className="clause" key={clause.name}>
-                <h4>{clause.name}</h4>
-                <p>{clause.text}</p>
-              </article>
+        <div className="raw-contract-content">
+          <div className="field-grid">
+            {fields.map(([label, value]) => (
+              <div className="field" key={label}>
+                <p className="label">{label}</p>
+                <p className="value">
+                  {label === "Ironclad workflow" && value ? (
+                    <a href={value} target="_blank" rel="noreferrer">Open in Ironclad ↗</a>
+                  ) : value || "Unknown"}
+                </p>
+              </div>
             ))}
           </div>
-        </section>
-      ) : null}
+
+          {result.warnings.length ? <ul className="warning-list">{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul> : null}
+
+          <details className="metadata-panel">
+            <summary><span>All Ironclad metadata</span><small>{record.metadata.length} populated fields</small></summary>
+            <div className="metadata-grid">{record.metadata.map((field) => (
+              <div className="metadata-field" key={`${field.key}-${field.label}`}>
+                <p className="label">{field.label}</p>
+                <p className="metadata-value">{/^https?:\/\//i.test(field.value) ? <a href={field.value} target="_blank" rel="noreferrer">{field.value}</a> : field.value}</p>
+              </div>
+            ))}</div>
+          </details>
+
+          {record.clauses.length ? <section className="clauses-panel">
+            <div className="clauses-header"><p className="label">Archived record</p><h3>Clauses</h3></div>
+            <div className="clause-list">{record.clauses.map((clause) => <article className="clause" key={clause.name}><h4>{clause.name}</h4><p>{clause.text}</p></article>)}</div>
+          </section> : null}
+        </div>
+      </details>
     </section>
   );
+}
+
+function ContractBrief({ summary }: { summary: ContractSummary }) {
+  return <section className="contract-brief">
+    <div className="brief-heading">
+      <div><p className="label">AI contract brief</p><h3>What matters for renewal</h3></div>
+      <span className="evidence-pill">Evidence-linked</span>
+    </div>
+    <p className="brief-overview">{summary.overview}</p>
+    <div className="brief-facts">{summary.facts.map((fact) => <article className="brief-fact" key={`${fact.label}-${fact.value}`}>
+      <p className="label">{fact.label}</p><p>{fact.value}</p>
+      <div className="source-list">{fact.sources.map((source) => <span key={source}>{source}</span>)}</div>
+    </article>)}</div>
+    {summary.watchouts.length ? <div className="brief-watchouts"><p className="label">Watchouts</p><ul>{summary.watchouts.map((item) => <li key={item.text}>{item.text}<small>{item.sources.join(" · ")}</small></li>)}</ul></div> : null}
+    <p className="brief-disclaimer">AI-generated from retrieved Ironclad fields and clauses. Verify source data before making contractual decisions.</p>
+  </section>;
 }
 
 function CandidatePanel({ candidates, onSelect }: { candidates: Candidate[]; onSelect: (id: string) => void }) {

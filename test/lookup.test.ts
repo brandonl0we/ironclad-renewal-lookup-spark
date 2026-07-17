@@ -33,6 +33,8 @@ async function main() {
   assert.equal(sindibor.record?.metadata.find((field) => field.key === "recordType")?.value, "Customer Contract");
   assert.equal(sindibor.record?.clauses.find((clause) => clause.name === "Renewals")?.text.includes("automatically renew"), true);
   assert.equal(sindibor.record?.metadata.some((field) => field.key === "clause_renewals"), false);
+  assert.equal(sindibor.summary?.facts.some((fact) => fact.label === "Renewal date"), true);
+  assert.equal(sindibor.summary?.facts.some((fact) => fact.label === "Contract price"), true);
 
   const notFound = await lookupRenewal("missing123.activehosted.com");
   assert.equal(notFound.status, "not_found");

@@ -27,6 +27,21 @@ export type RenewalRecord = {
   }>;
 };
 
+export type ContractSummary = {
+  status: "ai" | "fallback";
+  overview: string;
+  facts: Array<{
+    label: string;
+    value: string;
+    sources: string[];
+  }>;
+  watchouts: Array<{
+    text: string;
+    sources: string[];
+  }>;
+  generatedAt: string;
+};
+
 export type Candidate = {
   id: string;
   name: string;
@@ -43,6 +58,7 @@ export type LookupResult = {
   status: LookupStatus;
   confidence?: "high" | "medium" | "low";
   record?: RenewalRecord;
+  summary?: ContractSummary;
   candidates?: Candidate[];
   warnings: string[];
   source?: {
