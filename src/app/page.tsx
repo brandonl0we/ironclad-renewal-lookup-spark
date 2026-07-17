@@ -3,10 +3,8 @@
 import { FormEvent, useState } from "react";
 import type { Candidate, ContractSummary, LookupResult, RenewalRecord } from "@/lib/types";
 
-const DEFAULT_ACCOUNT = "silvaris94143.activehosted.com";
-
 export default function Home() {
-  const [account, setAccount] = useState(DEFAULT_ACCOUNT);
+  const [account, setAccount] = useState("");
   const [result, setResult] = useState<LookupResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
