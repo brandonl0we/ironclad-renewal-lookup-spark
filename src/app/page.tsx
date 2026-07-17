@@ -187,7 +187,7 @@ function ContractBrief({ summary }: { summary: ContractSummary }) {
   return <section className="contract-brief">
     <div className="brief-heading">
       <div><p className="label">AI contract brief</p><h3>What matters for renewal</h3></div>
-      <span className="evidence-pill">Evidence-linked</span>
+      <span className="evidence-pill">{summary.status === "ai" ? "AI · Evidence-linked" : "Evidence-linked fallback"}</span>
     </div>
     <p className="brief-overview">{summary.overview}</p>
     <div className="brief-facts">{summary.facts.map((fact) => <article className="brief-fact" key={`${fact.label}-${fact.value}`}>
