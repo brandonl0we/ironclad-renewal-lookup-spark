@@ -105,10 +105,22 @@ export function mockGetRecord(id: string): IroncladRecord | undefined {
     ironcladId: "IC-15499",
     properties: {
       recordType: { type: "string", value: "Customer Contract" },
-    },
-    clauses: {
-      Term: "This Order Form expires if it is not fully executed by its stated deadline.",
-      Renewals: "The subscription will automatically renew for additional periods of the same duration.",
+      clause_terms: {
+        type: "clause",
+        value: {
+          source: "ai",
+          clauseType: "terms",
+          clauseText: "This Order Form expires if it is not fully executed by its stated deadline.",
+        },
+      },
+      clause_renewals: {
+        type: "clause",
+        value: {
+          source: "ai",
+          clauseType: "renewals",
+          clauseText: "The subscription will automatically renew for additional periods of the same duration.",
+        },
+      },
     },
   };
 }
